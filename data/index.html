@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Poly-Waker</title>
+  <link rel="icon" type="image/png" href="icon.png">
+  <script src="chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #181818;
+      color: #EAEAEA;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      overflow-x: hidden;
+      text-align: center;
+    }
+
+    /*     
+    div {
+    border:1px white solid;
+  } */
+    .time-container {
+      width: 0%;
+      max-width: 00px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .time-label {
+      font-size: 24px;
+      margin-right: 0px;
+      width: 85px;
+    }
+
+    #id_icon {
+      cursor: pointer;
+      height: 44px;
+      padding: 10px;
+      opacity: 0.1;
+      transition: opacity 0.5s ease-in-out;
+    }
+
+    .time-input {
+      font-size: 24px;
+      width: 60px;
+      padding: 5px;
+      border: none;
+      border-radius: 5px;
+      background-color: #282828;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.4);
+      text-align: center;
+      outline: none;
+      color: #FFFFFF;
+      font-weight: bold;
+    }
+
+    .time-input:focus {
+      box-shadow: 0 0 5px rgba(0, 0, 255, 0.5);
+    }
+
+    canvas {
+      width: 90%;
+      max-width: 600px;
+      margin-bottom: 0px;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      width: 90%;
+      max-width: 600px;
+      justify-content: space-between;
+      margin-bottom: 0px;
+      padding: 0px;
+    }
+
+    .slider-label {
+      font-weight: 700;
+      width: 120px;
+      text-align: right;
+      margin-left: 10px;
+    }
+
+    .slider {
+      width: 50%;
+      margin: 5px 0;
+      appearance: none;
+      outline: none;
+      background: #333;
+      height: 25px;
+      border-radius: 5px;
+      overflow: hidden;
+      flex-grow: 0.5;
+    }
+
+    .slider::-webkit-slider-thumb {
+      appearance: none;
+      width: 20px;
+      height: 40px;
+      background: white;
+      border-radius: 3px;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5), 0 3px 6px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+    }
+
+    .slider-value {
+      width: 80px;
+      text-align: right;
+      margin-right: 10px;
+    }
+
+    /* #id_coffee_start {
+      background: linear-gradient(to right, #00b0a0 0%, #00f0c0 100%);
+    } */
+
+    #id_light_start {
+      background: linear-gradient(to right, #e0a000 0%, #ffe731 100%);
+    }
+
+    #id_light_end {
+      background: linear-gradient(to right, #e0a000 0%, #ffe731 100%);
+    }
+
+    #id_music_start {
+      background: linear-gradient(to right, #570099 0%, #b536ff 100%);
+    }
+
+    #id_music_end {
+      background: linear-gradient(to right, #570099 0%, #b536ff 100%);
+    }
+
+    #id_backup_start {
+      background: linear-gradient(to right, #e04e0000 0%, #ff6200 100%);
+    }
+
+    #id_snooze_time {
+      background: linear-gradient(to right, #016d0f 0%, #4ed50b 60%, #ff005d 95%, #ff0066 100%);
+    }
+
+
+    /* #id_coffee_start::-webkit-slider-thumb {
+    background: url('coffee.png') no-repeat center;
+    background-size: contain;
+    width: 40px;
+    height: 35px;
+}  */
+    #id_light_start::-webkit-slider-thumb {
+      background: url('light.png') no-repeat center;
+      background-size: contain;
+      background-color: rgba(30, 30, 30, 0.7);
+      width: 40px;
+      height: 30px;
+    }
+
+    #id_light_end::-webkit-slider-thumb {
+      background: url('light.png') no-repeat center;
+      background-size: contain;
+      background-color: rgba(30, 30, 30, 0.7);
+      width: 40px;
+      height: 30px;
+    }
+
+    #id_music_start::-webkit-slider-thumb {
+      background: url('music.png') no-repeat center;
+      background-size: contain;
+      background-color: rgba(255, 255, 255, 0.8);
+      width: 40px;
+      height: 30px;
+    }
+
+    #id_music_end::-webkit-slider-thumb {
+      background: url('music.png') no-repeat center;
+      background-size: contain;
+      background-color: rgba(255, 255, 255, 0.8);
+      width: 40px;
+      height: 30px;
+    }
+
+    #id_backup_start::-webkit-slider-thumb {
+      background-color: rgb(255, 255, 255);
+      width: 40px;
+      height: 30px;
+    }
+
+    #id_snooze_time::-webkit-slider-thumb {
+      background: url('icon.png') no-repeat center;
+      background-size: contain;
+      width: 40px;
+      height: 30px;
+    }
+
+    /* Responsive design adjustments for smaller screens */
+    @media only screen and (max-width: 480px) {
+      .slider-label {
+        font-size: 14px;
+        width: 100px;
+      }
+
+      .slider-value {
+        font-size: 14px;
+        width: 60px;
+      }
+    }
+
+    /* #id_control_coffee {
+      background: linear-gradient(to right, #00b0a100 10%, #00f0c0 80%);
+      width:50px;
+    } 
+    
+    #id_control_coffee::-webkit-slider-thumb {
+    background: url('coffee.png') no-repeat center;
+    background-size: contain;
+    width: 40px;
+    height: 35px;
+} 
+*/
+    #id_control_light {
+      background: linear-gradient(to right, #e0a00000 0%, #ffe731 90%);
+    }
+
+    #id_control_light::-webkit-slider-thumb {
+      background: url('light.png') no-repeat center;
+      background-size: contain;
+      background-color: rgba(30, 30, 30, 0.7);
+      width: 40px;
+      height: 30px;
+    }
+
+    #id_control_music {
+      background: linear-gradient(to right, #57009900 0%, #b536ff 90%);
+      height: 30px;
+    }
+
+    #id_control_music::-webkit-slider-thumb {
+      background: url('music.png') no-repeat center;
+      background-size: contain;
+      background-color: rgba(255, 255, 255, 0.8);
+      width: 40px;
+      height: 30px;
+    }
+
+
+    .separator {
+      margin: 0 auto;
+      background-color: #444;
+      width: 90%;
+      height: 2px;
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>Poly-Waker</h2>
+
+  <div class="time-container">
+    <span class="time-label"><!-- Alarm:--></span>
+    <img id="id_icon" src="icon.png" alt="Icon">
+    <input id="id_alarm_hour" class="time-input" type="number" step="1" placeholder="HH">
+    <span>:</span>
+    <input id="id_alarm_minute" class="time-input" type="number" step="1" placeholder="MM">
+  </div>
+
+  <canvas id="myChart" style="height: 150px;"></canvas>
+  <script src="mychart.js"></script>
+
+  <h2>Dein Ritual: </h2>
+  <!-- 
+  <br>
+  <div class="slider-container">
+    <span class="slider-label">Kaffee Start</span>
+    <input id='id_coffee_start' class='slider' type='range'>
+    <span id='id_coffee_start_value' class="slider-value">-</span>
+  </div>
+  <br> -->
+
+  <div class="slider-container">
+    <!-- <span class="slider-label">Light Start</span> -->
+    <span class="slider-label">Licht von</span>
+    <input id='id_light_start' class='slider' type='range'>
+    <span id='id_light_start_value' class="slider-value">-</span>
+  </div>
+  <div class="slider-container">
+    <!-- <span class="slider-label">End</span> -->
+    <span class="slider-label">bis</span>
+    <input id='id_light_end' class='slider' type='range'>
+    <span id='id_light_end_value' class="slider-value">-</span>
+  </div>
+
+  <br>
+  <div class="slider-container">
+    <!-- <span class="slider-label">Music Start</span> -->
+    <span class="slider-label">Musik von</span>
+    <input id='id_music_start' class='slider' type='range'>
+    <span id='id_music_start_value' class="slider-value">-</span>
+  </div>
+  <div class="slider-container">
+    <!-- <span class="slider-label">End</span> -->
+    <span class="slider-label">bis</span>
+    <input id='id_music_end' class='slider' type='range'>
+    <span id='id_music_end_value' class="slider-value">-</span>
+  </div>
+  <br>
+  <div class="slider-container">
+    <!-- <span class="slider-label">Backup Start</span> -->
+    <span class="slider-label">Backup klingelt</span>
+    <input id='id_backup_start' class='slider' type='range'>
+    <span id='id_backup_start_value' class="slider-value">-</span>
+  </div>
+  <br>
+
+  <div class="image-container" style="text-align: center;">
+    <img id="img1" src="smiley_normal.png" style="width: 50px;position: block; opacity: 1;">
+    <img id="img2" src="smiley_holy.png" style="width: 50px; position: block; opacity: 0;">
+  </div>
+  <div class="slider-container">
+    <!-- <span class="slider-label">Snooze for</span> -->
+    <span class="slider-label">Snoozzzzzze </span>
+    <input id='id_snooze_time' class='slider' type='range'>
+    <span id='id_snooze_time_value' class="slider-value">-</span>
+  </div>
+
+  <div class="separator"></div>
+
+  <h2>von Hand: </h2>
+  <!-- <div class="slider-container">
+  <span class="slider-label">Kaffee</span>
+  <input id='id_control_coffee' class='slider' min="0" max="1" step=1 type='range'>
+  <span class="slider-value"></span>
+</div> -->
+  <div class="slider-container">
+    <!-- <span class="slider-label">Light</span> -->
+    <span class="slider-label">Licht</span>
+    <input id='id_control_light' class='slider' min="0" max="100" step=1 type='range'>
+    <span class="slider-value"></span>
+  </div>
+  <div class="slider-container">
+    <!-- <span class="slider-label">Music</span> -->
+    <span class="slider-label">Musik</span>
+    <input id='id_control_music' class='slider' min="0" max="100" step=1 type='range'>
+    <span class="slider-value"></span>
+  </div>
+
+  <script>
+    const slidersConfig = {
+      // "id_coffee_start": {
+      //   "max": 30,
+      //   "value": 1
+      // },
+      "id_light_start": {
+        "max": 30,
+        "value": 2
+      },
+      "id_light_end": {
+        "max": 30,
+        "value": 10
+      },
+      "id_music_start": {
+        "max": 30,
+        "value": 3
+      },
+      "id_music_end": {
+        "max": 30,
+        "value": 15
+      },
+      "id_backup_start": {
+        "max": 30,
+        "value": 29
+      },
+      "id_snooze_time": {
+        "max": 30,
+        "value": 5
+      },
+      // "id_control_coffee": {
+      //   "max": 1,
+      //   "value": 0
+      // },
+      "id_control_light": {
+        "max": 100,
+        "value": 0
+      },
+      "id_control_music": {
+        "max": 100,
+        "value": 0
+      },
+    };
+
+    function initSliders() {
+      for (let id in slidersConfig) {
+
+        let slider = document.getElementById(id);
+        slider.min = 0;
+        slider.max = slidersConfig[id].max;
+        slider.value = slidersConfig[id].value;
+        slider.addEventListener("change", inputChanged);
+
+        // check if id does not contain "_control_"
+        if (id.indexOf("_control_") == -1) {
+          let output = document.getElementById(id + '_value');
+          output.innerHTML = slidersConfig[id].value + " min";
+        }
+      }
+    }
+
+    var Socket;
+
+    function init() {
+
+      document.getElementById("id_icon").addEventListener("click", function () {
+        console.log("icon clicked");
+        // opacity shows current state
+        val = document.getElementById("id_icon").style.opacity == 1 ? 0 : 1
+        var msg = { type: "alarm_enabled", value: val };
+        if (Socket && Socket.readyState === WebSocket.OPEN) {
+          Socket.send(JSON.stringify(msg));
+        }
+      });
+
+      // Get the input fields
+      var hourInput = document.getElementById("id_alarm_hour");
+      var minuteInput = document.getElementById("id_alarm_minute");
+
+
+      hourInput.addEventListener("input", function () {
+        if (hourInput.value > 23) {
+          hourInput.value = 0;
+        } else if (hourInput.value < 0) {
+          hourInput.value = 23;
+        }
+        hourInput.value = hourInput.value.padStart(2, "0");
+      });
+      hourInput.addEventListener("change", inputChanged);
+
+      minuteInput.addEventListener("input", function () {
+        if (minuteInput.value > 59) {
+          minuteInput.value = 0;
+          hourInput.value++;
+          if (hourInput.value > 23) {
+            hourInput.value = 0;
+          }
+        } else if (minuteInput.value < 0) {
+          minuteInput.value = 59;
+          hourInput.value--;
+          if (hourInput.value < 0) {
+            hourInput.value = 23;
+          }
+        }
+        minuteInput.value = minuteInput.value.padStart(2, "0");
+      });
+      minuteInput.addEventListener("change", inputChanged);
+
+      document.getElementById('id_snooze_time').addEventListener('input', function () {
+        const sliderValue = this.value / this.max;
+        document.getElementById('img1').style.opacity = 1 - sliderValue;
+        document.getElementById('img2').style.opacity = sliderValue;
+      });
+
+
+
+      initSliders();
+      Socket = new WebSocket("ws://" + window.location.hostname + ":81/");
+      Socket.onmessage = function (event) {
+        processCommand(event);
+      };
+    }
+
+    function inputChanged(event) {
+      console.log("inputChanged");
+      console.log(event.target.id);
+      console.log(event.target.value);
+
+      const id = event.target.id;
+      const value = event.target.value;
+      // get msgType by removing "id_" from id in beginning
+      const msgType = id.substring(3);
+      var msg = { type: msgType, value: value };
+
+      if (Socket && Socket.readyState === WebSocket.OPEN) {
+        Socket.send(JSON.stringify(msg));
+      }
+    }
+
+    function processCommand(event) {
+      var obj = JSON.parse(event.data);
+      var type = obj.type;
+
+      // if (type.localeCompare("graph_coffee") == 0) {
+      //   update_graph_coffee(obj.value); // from mychart.js
+      // }
+      if (type.localeCompare("graph_music") == 0) {
+        update_graph_music(obj.value); // from mychart.js
+      }
+      if (type.localeCompare("graph_light") == 0) {
+        update_graph_light(obj.value); // from mychart.js
+      }
+      if (type.localeCompare("graph_backup") == 0) {
+        update_graph_backup(obj.value); // from mychart.js
+      }
+
+      // Check if the type matches one of our slider configurations
+      for (let id in slidersConfig) {
+
+        const msgType = id.substring(3);
+        if (type.localeCompare(msgType) == 0) {
+          let value = parseInt(obj.value);
+          console.log(value);
+          let slider = document.getElementById(id);
+          slider.value = value;
+
+          // check if id does not contain "_control_"
+          if (id.indexOf("_control_") == -1) {
+            let output = document.getElementById(id + '_value');
+            output.innerHTML = value + " mins";
+          }
+          return; // Exit after handling
+        }
+
+        if (type.localeCompare("alarm_enabled") == 0) {
+          let value = parseInt(obj.value);
+          console.log(value);
+          let icon = document.getElementById("id_icon");
+
+          if (value == 1)
+            icon.style.opacity = 1;
+          else
+            icon.style.opacity = 0.1;
+
+          return;
+        }
+        if (type.localeCompare("alarm_hour") == 0) {
+          let value = parseInt(obj.value);
+          console.log(value);
+          let slider = document.getElementById("id_alarm_hour");
+          slider.value = value;
+          return;
+        }
+        if (type.localeCompare("alarm_minute") == 0) {
+          let value = parseInt(obj.value);
+          console.log(value);
+          let slider = document.getElementById("id_alarm_minute");
+          slider.value = value;
+          return;
+        }
+      }
+
+    }
+
+    window.onload = function (event) {
+      init();
+    };
+  </script>
+</body>
+
+</html>

@@ -2,13 +2,14 @@
 #ifndef wake_backup_H
 #define wake_backup_H
 
+// TODO REWORK THIS FILE: generate a proper beep sound non-blocking
+// TODO:  (also rename to wake_audio or so)
+
 #include <Arduino.h>
 #include "config.h"
 
 #include <driver/i2s.h>
 #include <elapsedMillis.h>
-
-// TODO REWORK THIS FILE: generate a proper beep sound non-blocking
 
 float alarm_volume = 1;
 float alarm_period_ms = 1000;

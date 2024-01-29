@@ -7,27 +7,63 @@
 #include <OneButton.h>
 #include <elapsedMillis.h>
 
+void wakeOrForward(void *callback);
+
 class UI
 {
 public:
-    UI(){};
-
-    UI_Encoder rotaryEncoder = UI_Encoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN);
-    OneButton rotaryButton = OneButton(ROTARY_ENCODER_BUTTON_PIN, true);
-    OneButton arcadeButton = OneButton(BUTTON_ARCADE, true);
+    static UI& getInstance()
+    {
+        static UI instance;
+        return instance;
+    }
 
     void setup();
     void loop();
 
+    UI_Encoder rotaryEncoder = UI_Encoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN);
+    OneButton encoderButton = OneButton(ROTARY_ENCODER_BUTTON_PIN, true);
+    OneButton arcadeButton = OneButton(BUTTON_ARCADE, true);
+
+    void attachClickEncoder(void (*cb)(void)) { encoderButton.attachClick(wakeOrForward, reinterpret_cast<void *>(cb)); }
+    void attachClickArcade(void (*cb)(void)) { arcadeButton.attachClick(wakeOrForward, reinterpret_cast<void *>(cb)); }
+    void attachHoldArcade(void (*cb)(void)) { arcadeButton.attachLongPressStart(wakeOrForward, reinterpret_cast<void *>(cb)); }
+
     long encoderChanged();
 
     elapsedMillis since_activity = 0;
-    bool displaySleeping = false;
+
+    void setDisplaySleeping(bool value) { _displaySleeping = value; }
+    bool displaySleeping() { return _displaySleeping; }
+
+private:
+    UI() {} // Private constructor to prevent instantiation
+    UI(const UI&) = delete; // Delete copy constructor
+    UI& operator=(const UI&) = delete; // Delete assignment operator
+    
+    bool _displaySleeping = false;
 };
 
-UI ui; // global object declaration
+UI& ui = UI::getInstance(); // Global access to the UI instance
 
 void IRAM_ATTR readEncoderISR() { ui.rotaryEncoder.readEncoder_ISR(); }
+
+typedef void (*CallbackFunction)();
+
+void wakeOrForward(void *callback)
+{
+    CallbackFunction func = reinterpret_cast<CallbackFunction>(callback);
+    ui.since_activity = 0;
+    if (ui.displaySleeping())
+    {
+        ui.setDisplaySleeping(false);
+        Serial.println("Woke display");
+        return;
+    }
+    if (func != nullptr)
+        func();
+}
+
 
 void UI::setup()
 {
@@ -36,25 +72,13 @@ void UI::setup()
     arcadeButton.setPressTicks(1500); // 1.5s for long press
 
     // arcadeButton.setClickTicks(400);
-    //  rotaryButton.setClickTicks(200);
+    // encoderButton.setClickTicks(200);
 }
 
 void UI::loop()
 {
-    if (since_activity > (config.display_sleep_time_s * 1000))
-        displaySleeping = true;
-    if (mode() == RINGING)
-        displaySleeping = false;
-
-    rotaryButton.tick();
+    encoderButton.tick();
     arcadeButton.tick();
-
-#if 0
-    if (rotaryEncoder.encoderChanged())
-    {
-        Serial.println(rotaryEncoder.readEncoder());
-    }
-#endif
 }
 
 long UI::encoderChanged()

@@ -8,9 +8,21 @@
 
 extern WebSocketsServer webSocket;
 
-// Function prototypes
-void sendJson(const String &type, const String &value);
-void sendJsonArray(const String &type, const float arrayValues[], int length);
+// TODO why "type" and not "name" ?
+// Sends a JSON object to all connected WebSocket clients
+void sendJson(const Config::Parameter &param)
+{
+    if (webSocket.connectedClients() > 0)
+    { // Only send if there are connected clients
+        StaticJsonDocument<200> doc;
+        doc["type"] = param.name;
+        doc["value"] = param.value;
+        String jsonString;
+        serializeJson(doc, jsonString);
+        webSocket.broadcastTXT(jsonString);
+        Serial.println("Sent JSON: " + jsonString); // Debug output
+    }
+}
 
 // Sends a JSON object to all connected WebSocket clients
 void sendJson(const String &type, const String &value)
@@ -28,7 +40,6 @@ void sendJson(const String &type, const String &value)
 }
 
 const int MAX_ARRAY_LENGTH = 100; // Defines the maximum length for JSON arrays
-
 // Sends a JSON array to all connected WebSocket clients
 void sendJsonArray(const String &type, const float arrayValues[], int length)
 {

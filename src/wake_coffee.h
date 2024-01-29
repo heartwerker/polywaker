@@ -30,7 +30,6 @@ void controlCoffee(bool value)
 
 void setCoffee(bool value)
 {
-
     if (control_coffee == value)
         coffee_retry_count++;
     else

@@ -16,7 +16,6 @@ int led_retry_count = 0;
 float control_light = 0.0;
 elapsedMillis since_last_light = 0;
 
-
 void sendLight(int index, float value) // 0.0 - 1.0
 {
     msg_light.index = index;
@@ -26,7 +25,7 @@ void sendLight(int index, float value) // 0.0 - 1.0
 }
 
 // should be called slowly (from server command)
-void controlLight(float value)
+void controlLight(float value, bool andMotor = false)
 {
     control_light = constrain(value, 0.0, 1.0);
 
@@ -47,24 +46,28 @@ void controlLight(float value)
 #elif USER_IS_DAVE
         // map value to W, R, G channels
         delayMicroseconds(1000);
-        sendLight(0, (value - 0.2) / 0.8);
+        sendLight(0, (value - 0.2) / 0.8);      // white
         delayMicroseconds(1000);
         sendLight(1, value * 5);                    // red
         delayMicroseconds(1000);
         sendLight(2, constrain(value * 2, 0, 0.7)); // green
 
-#define offset 0.8
+    if (andMotor)
+    {
+#define offset 0.1
         if (value > offset)
         {
+            Serial.printf("sendLight(21, %f)\n", (value - offset) / (1 - offset) + 0.2);
             delayMicroseconds(1000);
-            sendLight(11, (value - offset) / (1 - offset) +0.2); // motor
+            sendLight(21, (value - offset) / (1 - offset)); // motor : index 21 special config
         }
+    }
 #endif
         since_last_light = 0;
 }
 
 // can be called constantly from loop
-void setLight(float value) // 0.0 - 1.0
+void setLight(float value, bool andMotor = false) // 0.0 - 1.0
 {
     if (since_last_light < 30)
         return;
@@ -79,7 +82,7 @@ void setLight(float value) // 0.0 - 1.0
 
     if (led_retry_count < 3)
     {
-        controlLight(value);
+        controlLight(value, andMotor);
 
         if (counter_printLight++ > 50)
         {

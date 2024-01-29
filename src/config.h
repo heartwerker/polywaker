@@ -1,8 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include "config_user.h" // for storing configurations like ritual timings
-
 // ================== FEATURES ====================
 #define ENABLE_WIFI             1
 #define ENABLE_SERVER           1
@@ -15,8 +13,7 @@
 #define ENABLE_WAKE_LIGHT       1
 #define ENABLE_WAKE_COFFEE      0
 #define ENABLE_WAKE_MUSIC       1
-#define ENABLE_WAKE_BACKUP      1
-
+#define ENABLE_WAKE_BACKUP      0
 
 // ================ USER SELECT ====================
 
@@ -29,7 +26,7 @@
 #if USER_IS_LEO // zero-one
 #define RPI_NAME "http://polywaker-music.local:3141"
 #elif USER_IS_JANEK
-#define RPI_NAME "http://nice-pi.local:3141/"
+#define RPI_NAME "http://nice-pi:3141/"
 #elif USER_IS_DAVE
 #define RPI_NAME "http://pi.local:3141"
 #endif
@@ -76,12 +73,24 @@ uint8_t MAC_ADDRESS_COFFEE[6] = {0x08, 0x3A, 0x8D, 0xD1, 0xA7, 0x2A}; // polywak
 
 #define MIN_TO_MS 60000
 
+//TODO use extra repo for these helpers:
+
 float mapf(float value, float fromLow, float fromHigh, float toLow, float toHigh) {
     return (value - fromLow) * (toHigh - toLow) / (fromHigh - fromLow) + toLow;
 }
 
 float mapConstrainf(float value, float fromLow, float fromHigh, float toLow, float toHigh) {
     return constrain(mapf(value, fromLow, fromHigh, toLow, toHigh), toLow, toHigh);
+}
+
+template <typename T>
+T wrap(T value, T low, T high) {
+    T range = high - low;
+    while (value < low)
+        value += range;
+    while (value > high)
+        value -= range;
+    return value;
 }
 
 

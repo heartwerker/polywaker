@@ -28,15 +28,7 @@ public:
 
     long encoderChanged()
     {
-        long changed = AiEsp32RotaryEncoder::encoderChanged();
-        if (changed)
-        {
-            if (changed > (MAX_STEPS / 2))
-                changed -= MAX_STEPS;
-            else if (changed < -(MAX_STEPS / 2))
-                changed += MAX_STEPS;
-        }
-        return changed;
+        return wrap((int)AiEsp32RotaryEncoder::encoderChanged(), -MAX_STEPS/2, MAX_STEPS/2);
     }
 };
 

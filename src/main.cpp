@@ -2,54 +2,35 @@
 #include "config.h"
 #include "elapsedMillis.h"
 
+#include "main_waker.h"
+
+#include "config_user.h" 
+#include <SPIFFS.h>
+
 #if ENABLE_WIFI
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
-#include <ESPAsyncWiFiManager.h>         //https://github.com/tzapu/WiFiManager
-
+#include <ESPAsyncWiFiManager.h>
 AsyncWebServer server_select(80);
 DNSServer dns;
-#endif
 
-#include "main_waker.h"
+#if ENABLE_SERVER
+#include "ui_server.h"
+#endif
+#endif
 
 #if ENABLE_DISPLAY
 #include "display.h"
 #endif
 
-
-#if ENABLE_WAKE_BACKUP
-#include "wake_backup.h"
-#endif
-
 #if ENABLE_ESPNOW
 #include "util/espnow.h"
-void ESPNOW_receiveBytes(uint8_t *data, uint8_t len);
-#endif
-
-#if ENABLE_WAKE_LIGHT
-#include "wake_light.h"
-#endif
-
-#if ENABLE_WAKE_COFFEE
-#include "wake_coffee.h"
+void ESPNOW_receiveBytes(uint8_t *data, uint8_t len); 
 #endif
 
 #if ENABLE_UI
 #include "ui.h"
-extern UI ui;
-void arcadeButtonLongPress();
-void arcadeButtonClicked();
-void rotaryButtonClicked();
 #endif
-
-#include <SPIFFS.h>
-
-#if ENABLE_SERVER
-#include "ui_server.h"
-#endif
-
-void srv_setup();
 
 // ================================================================================================
 void setup()
@@ -58,28 +39,19 @@ void setup()
 
 #if ENABLE_DISPLAY
     display_setup();
-
-    display.setTextSize(1);
-    display.setCursor(0, 2);
-    display.printf("checking");
-    display.setTextSize(2);
-    display.setCursor(0, 17);
-    display.printf("WiFi...");
-    display.display();
 #endif
 
 #if ENABLE_WIFI 
     AsyncWiFiManager wifiManager(&server_select,&dns);
-#if 1
+    wifiManager.setTimeout(180);
+    
     if (!wifiManager.autoConnect("Poly-Waker - select WIFI here!"))
     {
         Serial.println("failed to connect and hit timeout");
         ESP.restart();
     }
-    #else
-    wifiManager.setDebugOutput(true);
-    wifiManager.startConfigPortal("Poly-Waker - select WIFI here!");    
-    #endif
+    // wifiManager.setDebugOutput(true);
+    // wifiManager.startConfigPortal("Poly-Waker - select WIFI here!");
     Serial.println(WiFi.macAddress());
 #endif
 
@@ -87,40 +59,23 @@ void setup()
     ESPNOW_Init(ESPNOW_receiveBytes);
 #endif
 
-#if ENABLE_WAKE_BACKUP
-    wake_backup_setup();
-#endif
-
-    actual_time_setup();
-    main_waker_setup();
-    setMode(IDLE);
-
 #if ENABLE_UI
     ui.setup();
-    ui.arcadeButton.attachClick(arcadeButtonClicked);
-    ui.rotaryButton.attachClick(rotaryButtonClicked);
-
-    ui.arcadeButton.attachLongPressStart(arcadeButtonLongPress);
 #endif
+
+    main_waker_setup();
 
     if (!SPIFFS.begin())
         Serial.println("SPIFFS could not initialize");
-        
     config_setup();
 
 #if ENABLE_SERVER
     server_setup();
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setCursor(0, 5);
-    display.printf("Find me:");
-    display.setCursor(0, 20);
-    display.printf("http://waker.local");
-    display.display();
+    display_webserver_message();
     delay(2000);
 #endif
 
-    waker.retrieveAlarmFromConfig();
+    waker.setAlarmFromConfig();
     
 #if ENABLE_AUTO_START
     waker.setAlarmRelativeIn(10);
@@ -128,51 +83,51 @@ void setup()
 
     Serial.println("Starting loop() ...");
 }
-
-void main_waker_loop();
-
 // ================================================================================================
-elapsedMicros time_elapsed = 0;
-elapsedMillis since_print = 0;
-int count_since_print = 0;
 
-int getMicro()
+int measure_us()
 {
+    static elapsedMicros time_elapsed = 0;
     int t = time_elapsed;
     time_elapsed = 0;
     return t;
 }
 
-int us_server, us_ui, us_display, us_audio, us_device;
+int us_server, us_ui, us_waker, us_display, us_audio = 0;
+
 void loop()
 {
-    getMicro();
+    measure_us();
     
 #if ENABLE_SERVER
     server_loop();
-    us_server += getMicro();
+    us_server += measure_us();
 #endif
 
 #if ENABLE_UI
     ui.loop();
-    us_ui += getMicro();
+    us_ui += measure_us();
 #endif
+
+    main_waker_loop();
+    us_waker += measure_us();
 
 #if ENABLE_DISPLAY
     display_loop();
-    us_display += getMicro();
+    us_display += measure_us();
 #endif
 
 #if ENABLE_WAKE_BACKUP
     wake_backup_audio_loop();
-    wake_backup_setActive(waker.isRinging && (waker.since_alarm_started > (config.backup_start * 1000)));
-    us_audio += getMicro();
+    wake_backup_setActive(waker.isRinging() && (waker.since_alarm_started > (config.backup_start * 1000)));
+    us_audio += measure_us();
 #endif
 
-    main_waker_loop();
-    us_device += getMicro();
-
 #if ENABLE_DEBUG_PRINT_TASK_TIMINGS
+
+    static elapsedMillis since_print = 0;
+    static int count_since_print = 0;
+
     count_since_print++;
 
     if (since_print > 500)
@@ -191,16 +146,15 @@ void loop()
         count_since_print = 0;
     }
 #endif
-
 }
 
 #if ENABLE_ESPNOW
-bool light_on = false;
 // ########################## RX callback ##########################
 void ESPNOW_receiveBytes(uint8_t *data, uint8_t len)
 {
+    static bool light_on = false;
     memcpy(&msg, data, len);
-    //    Serial.printf("ESPNOW_receiveBytes: %d - %f\n",  msg.index, msg.value);
+    Serial.printf("ESPNOW_receiveBytes: %d - %f\n", msg.index, msg.value);
 
     light_on = !light_on;
     digitalWrite(LED_BUILTIN, light_on);

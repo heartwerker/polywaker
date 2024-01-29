@@ -1,6 +1,6 @@
 #pragma once
-#ifndef ALARM_TIME_H
-#define ALARM_TIME_H
+#ifndef WAKER_H
+#define WAKER_H
 
 #include "actual_time.h"
 #include <elapsedMillis.h>
@@ -9,76 +9,84 @@
 class Waker
 {
 public:
-    Waker() {}
+    void setup()
+    {
+        actual_time_setup();
+    }
 
     void setAlarmRelativeIn(int seconds)
     {
-        struct tm timeinfo = actual_time_get();
-        timeinfo.tm_sec += seconds;
+        Time now = actual_time_get();
+        now.tm_sec += seconds;
 
-        while (timeinfo.tm_sec >= 60)
+        while (now.tm_sec >= 60)
         {
-            timeinfo.tm_sec -= 60;
-            timeinfo.tm_min += 1;
+            now.tm_sec -= 60;
+            now.tm_min += 1;
         }
-        while (timeinfo.tm_min >= 60)
+        while (now.tm_min >= 60)
         {
-            timeinfo.tm_min -= 60;
-            timeinfo.tm_hour += 1;
+            now.tm_min -= 60;
+            now.tm_hour += 1;
         }
-        if (timeinfo.tm_hour >= 24)
-        {
-            timeinfo.tm_hour = timeinfo.tm_hour % 24;
-        }
-        setAlarm(timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+
+        now.tm_hour = now.tm_hour % 24;
+        setAlarm(now, false);
     }
 
-    void retrieveAlarmFromConfig()
+    void setAlarmFromConfig()
     {
         setEnabled(config.alarm_enabled);
-        _tm_alarm.tm_hour = config.alarm_hour;
-        _tm_alarm.tm_min = config.alarm_minute;
-        _tm_alarm.tm_sec = 0;
+        _alarm.tm_hour = config.alarm_hour;
+        _alarm.tm_min = config.alarm_minute;
+        _alarm.tm_sec = 0;
 
         _snooze_time_s = config.snooze_time * 60;
 
         since_alarm_changed = 0;
     }
 
-    void setAlarm(int hour, int minute, int second)
+    void moveAlarm(int seconds)
     {
-        _tm_alarm.tm_hour = (hour + 24) % 24;
-        _tm_alarm.tm_min = (minute + 60) % 60;
-        _tm_alarm.tm_sec = (second + 60) % 60;
-        setAlarm(_tm_alarm);
+        // Serial.println("moveAlarm(" + String(seconds) + ")");
+
+        int hour = seconds / 3600;
+        seconds -= hour * 3600;
+        int minute = seconds / 60;
+        seconds -= minute * 60;
+
+        _alarm.tm_hour = (_alarm.tm_hour + hour + 24) % 24;
+        _alarm.tm_min = (_alarm.tm_min + minute + 60) % 60;
+        _alarm.tm_sec = seconds;
+        setAlarm(_alarm);
     }
 
-    void setAlarm(struct tm timeinfo)
+    void setAlarm(Time time, bool save=true)
     {
-        _tm_alarm = timeinfo;
+        _alarm = time;
         setEnabled(true);
 
-        // to server
-        sendJson("alarm_hour", String(_tm_alarm.tm_hour));
-        sendJson("alarm_minute", String(_tm_alarm.tm_min));
+        if (save)
+        {
+            // to server
+            config.alarm_enabled = _enabled;
+            config.alarm_hour = _alarm.tm_hour;
+            config.alarm_minute = _alarm.tm_min;
 
-        config.alarm_enabled = _enabled;
-        config.alarm_hour = _tm_alarm.tm_hour;
-        config.alarm_minute = _tm_alarm.tm_min;
-        config.save();
-        Serial.println("Alarm time set to " + String(_tm_alarm.tm_hour) + ":" + String(_tm_alarm.tm_min));
+            sendJson(config.alarm_hour);
+            sendJson(config.alarm_minute);
+            config.save();
+        }
+        Serial.println("Alarm time set to " + String(_alarm.tm_hour) + ":" + String(_alarm.tm_min));
     }
 
-    struct tm getAlarmTime()
-    {
-        return _tm_alarm;
-    }
+    Time alarm() { return _alarm; }
 
     void stopAlarm()
     {
         setEnabled(false);
-        isRinging = false;
-        isSnoozing = false;
+        _ringing = false;
+        _snoozing = false;
         num_snoozes = 0;
         _snooze_time_s = config.snooze_time * 60;
     }
@@ -87,11 +95,13 @@ public:
     {
         since_snooze_started = 0;
         num_snoozes++;
-        isRinging = false;
-        isSnoozing = true;
+        _ringing = false;
+        _snoozing = true;
         _snooze_time_s = config.snooze_time * 60;
     }
 
+    // TODO move this to statemachine - or move statemachine here.
+    
     bool alarmStarted() // has to be called at least with 1 Hz to not miss alarm
     {
         if (!_enabled)
@@ -99,14 +109,15 @@ public:
             return false;
         }
 
-        if (!isSnoozing)
+        if (!_snoozing)
         {
             // detects last time was before alarm time now is after
             if ((_untilAlarm > 0) && (secondsToAlarm() <= 0))
             {
-                if (!isRinging)
+                if (!_ringing)
                 {
-                    isRinging = true;
+                    
+                    _ringing = true;
                     num_alarm++;
                     since_alarm_started = 0;
                     return true;
@@ -118,11 +129,11 @@ public:
                 }
             }
         }
-        else if (isSnoozing)
+        else if (_snoozing)
         {
             if (since_snooze_started > (_snooze_time_s * 1000))
             {
-                isRinging = true;
+                _ringing = true;
                 since_alarm_started = 0;
                 return true;
             }
@@ -151,11 +162,11 @@ public:
         {
             return 0;
         }
-        struct tm timeinfo = actual_time_get();
+        Time now = actual_time_get();
         int seconds = 0;
-        seconds += (_tm_alarm.tm_hour - timeinfo.tm_hour) * 60 * 60;
-        seconds += (_tm_alarm.tm_min - timeinfo.tm_min) * 60;
-        seconds += (_tm_alarm.tm_sec - timeinfo.tm_sec);
+        seconds += (_alarm.tm_hour - now.tm_hour) * 60 * 60;
+        seconds += (_alarm.tm_min - now.tm_min) * 60;
+        seconds += (_alarm.tm_sec - now.tm_sec);
         return seconds;
     }
 
@@ -172,7 +183,8 @@ public:
         {
             this->_enabled = e;
             since_enabled_changed = 0;
-            sendJson("alarm_enabled", String(_enabled));
+            config.alarm_enabled = _enabled;
+            sendJson(config.alarm_enabled);
         }
     }
     void toggleEnabled()
@@ -180,6 +192,8 @@ public:
         setEnabled(!isEnabled());
     }
 
+    bool isRinging() { return _ringing; }
+    bool isSnoozing() { return _snoozing; }
 
 public:
     elapsedMillis since_alarm_started = 0;
@@ -187,16 +201,15 @@ public:
     elapsedMillis since_alarm_changed = 0;
     elapsedMillis since_enabled_changed = 0;
 
-
-    bool isRinging = false;
-    bool isSnoozing = false;
-
 private:
-    struct tm _tm_alarm;
+    bool _snoozing = false;
+    bool _ringing = false;
+
+    Time _alarm;
     bool _enabled = false;
     int _untilAlarm = -1;
 
     int _snooze_time_s;
 };
 
-#endif // ALARM_TIME_H
+#endif // WAKER_H

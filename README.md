@@ -1,4 +1,4 @@
-# Poly-Waker <img src="data/icon.png" height="35" valign="bottom"> : <img src="data/music.png" height="35" valign="bottom">  <img src="data/light.png" height="35" valign="bottom">  <img src="data/coffee.png" height="35" valign="bottom">  
+# polywaker <img src="data/icon.png" height="35" valign="bottom"> : <img src="data/music.png" height="35" valign="bottom">  <img src="data/light.png" height="35" valign="bottom">  <img src="data/coffee.png" height="35" valign="bottom">  
 
 There once was a vision of a lovely friend of ours... She dreamed of awakening with a symphony of sensory experiences woven into a ritual of fading soundscapes, emerging sunlight, and the fine smell of coffee.
 

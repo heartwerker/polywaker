@@ -43,7 +43,7 @@ public:
     Parameter coffee_start{this, "coffee_start", 0};
 #endif
 
-    Parameter snooze_time   {this, "snooze_time", 5};
+    Parameter alarm_snooze_time   {this, "alarm_snooze_time", 5};
     Parameter backup_start  {this, "backup_start", 29};
 
     Parameter alarm_enabled {this, "alarm_enabled", true};
@@ -58,6 +58,7 @@ public:
     int display_sleep_when_before_h = 9; 
     int setting_inactivity_s = 15;
     int backup_fade_relative_s = 120;
+    bool blink_light_when_backup = true;
     // ==============================
 
     bool save() const

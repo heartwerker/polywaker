@@ -2,7 +2,11 @@
 #ifndef MAIN_WAKER_H
 #define MAIN_WAKER_H
 
-// This second main file connects ui to waker...
+/**
+ * @file main_waker.h
+ * @brief The main_waker module connects the user interface (UI) to the (poly)waker instance,
+ * which handles the alarm clock logic.
+ */
 
 #include <Arduino.h>
 #include "config.h"
@@ -10,21 +14,36 @@
 #include "config_user.h"
 
 #include "polywaker.h"
-PolyWaker waker; // = alarm clock logic
+PolyWaker waker;
 
 #if ENABLE_UI
 #include "ui.h"
 #endif
 
+
+// ================================================================================================
 void main_waker_setup()
 {
     Serial.println("main_waker_setup()");
     waker.setup();
 
+    waker.setup();
+
 #if ENABLE_UI
+    ui.setup();
     ui.attachClickEncoder   ([]() { waker.clickEncoder(); });
     ui.attachClickArcade    ([]() { waker.clickArcade(); });
     ui.attachHoldArcade     ([]() { waker.holdArcade(); });
+#endif
+
+    if (!SPIFFS.begin())
+        Serial.println("SPIFFS could not initialize");
+    config_setup();
+
+    waker.setAlarmFromConfig();
+    
+#if ENABLE_AUTO_START
+    waker.setAlarmRelativeIn(10);
 #endif
 }
 
@@ -53,7 +72,7 @@ void main_waker_loop()
         if (steps != 0)
             waker.reactToEncoder(steps);
 
-        waker.loop_state_machine();
+        waker.loop();
 
         // stop setting alarm after inactivity
         if ((waker.mode() == SETTING_ALARM_HOUR) || (waker.mode() == SETTING_ALARM_MINUTE))

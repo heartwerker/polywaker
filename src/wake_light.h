@@ -54,12 +54,13 @@ void controlLight(float value, bool andMotor = false)
 
     if (andMotor)
     {
-#define offset 0.1
+#define offset 0.5
         if (value > offset)
         {
-            Serial.printf("sendLight(21, %f)\n", (value - offset) / (1 - offset) + 0.2);
+            float motor_position = constrain((value - offset) / (1 - offset), 0.0, 1.0);
+            Serial.printf("sendLight(21, %f)\n", motor_position);
             delayMicroseconds(1000);
-            sendLight(21, (value - offset) / (1 - offset)); // motor : index 21 special config
+            sendLight(21, motor_position);
         }
     }
 #endif
@@ -69,7 +70,7 @@ void controlLight(float value, bool andMotor = false)
 // can be called constantly from loop
 void setLight(float value, bool andMotor = false) // 0.0 - 1.0
 {
-    if (since_last_light < 30)
+    if (since_last_light < 60)
         return;
 
     //Serial.println("setLight(" + String(msg_light.value) + ")");

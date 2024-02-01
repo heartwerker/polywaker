@@ -45,12 +45,10 @@ uint8_t MAC_ADDRESS_LIGHT[6] = {0x08, 0x3A, 0x8D, 0xCC, 0x5A, 0xAE}; // "polywak
 
 uint8_t MAC_ADDRESS_COFFEE[6] = {0x08, 0x3A, 0x8D, 0xD1, 0xA7, 0x2A}; // polywaker-coffee-01
 
-
 // ================ Development ===================
 
 #define ENABLE_DEBUG_PRINT_TASK_TIMINGS 0
 #define ENABLE_AUTO_START 0
-#define ENABLE_AUTO_RESTART 0
 #define SERIAL_BAUD_RATE 115200
 
 // ================ PINOUT ========================

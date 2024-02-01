@@ -165,14 +165,14 @@ void webSocketEvent(byte num, WStype_t ws_type, uint8_t *payload, size_t length)
       if (redraw)
         updateGraphs();
 
-      parse(&doc, &config.snooze_time);
-
-      bool alarmChanged = false;
-      alarmChanged |= parse(&doc, &config.alarm_enabled);
-      alarmChanged |= parse(&doc, &config.alarm_hour);
-      alarmChanged |= parse(&doc, &config.alarm_minute);
+      bool alarm_set = false;
+      alarm_set |= parse(&doc, &config.alarm_snooze_time);
+      alarm_set |= parse(&doc, &config.alarm_enabled);
+      alarm_set |= parse(&doc, &config.alarm_hour);
+      alarm_set |= parse(&doc, &config.alarm_minute);
       
-      if (alarmChanged)
+      // TODO remove waker dependency
+      if (alarm_set)
         waker.setAlarmFromConfig();
 
       if (type.startsWith("control_"))

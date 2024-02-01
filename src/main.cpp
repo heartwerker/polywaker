@@ -59,27 +59,13 @@ void setup()
     ESPNOW_Init(ESPNOW_receiveBytes);
 #endif
 
-#if ENABLE_UI
-    ui.setup();
-#endif
-
-    main_waker_setup();
-
-    if (!SPIFFS.begin())
-        Serial.println("SPIFFS could not initialize");
-    config_setup();
-
 #if ENABLE_SERVER
     server_setup();
     display_webserver_message();
     delay(2000);
 #endif
 
-    waker.setAlarmFromConfig();
-    
-#if ENABLE_AUTO_START
-    waker.setAlarmRelativeIn(10);
-#endif
+    main_waker_setup();
 
     Serial.println("Starting loop() ...");
 }
@@ -118,8 +104,10 @@ void loop()
 #endif
 
 #if ENABLE_WAKE_BACKUP
+    // TODO Improve this completely radically totally!
+    
     wake_backup_audio_loop();
-    wake_backup_setActive(waker.isRinging() && (waker.since_alarm_started > (config.backup_start * 1000)));
+    wake_backup_setActive(waker.mode()==RINGING && (waker._since_alarm_started > (config.backup_start * 1000)));
     us_audio += measure_us();
 #endif
 

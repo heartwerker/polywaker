@@ -149,7 +149,7 @@ void display_loop()
     switch (waker.mode())
     {
     // ================================================
-    case STARTUP:
+    case INIT:
     {
         break;
     }
@@ -214,7 +214,7 @@ void display_loop()
     // Overlay basic animations
 
     // TURN OFF 
-    if (!waker.isEnabled() && waker.since_enabled_changed < 700)
+    if (!waker.enabled() && waker.since_enabled_changed < 700)
     {
         display.clearDisplay();
         display.setFont(&FreeSans9pt7b);
@@ -224,7 +224,7 @@ void display_loop()
         display.printf("aus !");
     }
     // TURN ON 
-    else if (waker.isEnabled() && waker.since_enabled_changed < 1500)
+    else if (waker.enabled() && waker.since_enabled_changed < 1500)
     {
         display.clearDisplay();
         display.setFont(&FreeSans9pt7b);
@@ -253,7 +253,7 @@ void display_loop()
         }
     }
     // BOUNCY CLOCK
-    else if (waker.isEnabled())
+    else if (waker.enabled())
     {
         if ((waker.mode() == RINGING) || 0)
         {
@@ -262,9 +262,9 @@ void display_loop()
             float y_factor = 1 - fabs(cosf(phasor));
             display.drawBitmap(0 + x_factor * 10, 3 + 8 * y_factor, alarmIcon_20_20, 20, 20, 1);
 
-            if (waker.since_alarm_started > 1000)
+            if (waker._since_alarm_started > 1000)
             {
-                float ritual_relative = float(waker.since_alarm_started) / float(30 / 2 * MIN_TO_MS);
+                float ritual_relative = float(waker._since_alarm_started) / float(30 / 2 * MIN_TO_MS);
                 display.drawLine(0, 1, 128 * ritual_relative, 1, 1);
             }
         }

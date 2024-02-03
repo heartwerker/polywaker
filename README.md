@@ -22,6 +22,8 @@ This section will guide you through setting up your development environment and 
 
 - On first start, the WiFiManager will create a WiFi hotspot to help you configure and connect to your local wifi!
 
+- Later you can also do updates wirelessly
+
 # Software Components
 - see [platformio.ini](platformio.ini) for used lib_deps
 - Shoutouts to [mo-thunderz](https://github.com/mo-thunderz/Esp32WifiPart4) for ESP32 webserver tutorial
@@ -36,7 +38,7 @@ To construct your Poly-Waker, you'll need:
 - An OLED display for time and alarm status
 - Optional: i2s audio and a speaker for a backup alarm sound
 
-#TODO: Add simple Fritzing schematics
+#TODO: Add simple schematics
 
 # Server
 
@@ -79,9 +81,9 @@ See: src/wake_coffee.h
 
 # Dreams 
 
-- OTA wireless upgrades.
 - Integrate scents/smells as a wake-up modality.
 - Investigate temperature integration for added comfort.
+- Also sleep cycle detection mmWave sensor ?
 - 
 
 # Licenses

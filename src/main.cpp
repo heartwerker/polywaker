@@ -14,6 +14,8 @@
 AsyncWebServer server_select(80);
 DNSServer dns;
 
+#include <ArduinoOTA.h>
+
 #if ENABLE_SERVER
 #include "ui_server.h"
 #endif
@@ -53,6 +55,8 @@ void setup()
     // wifiManager.setDebugOutput(true);
     // wifiManager.startConfigPortal("Poly-Waker - select WIFI here!");
     Serial.println(WiFi.macAddress());
+    Serial.println(WiFi.localIP());
+    ArduinoOTA.begin();
 #endif
 
 #if ENABLE_ESPNOW
@@ -110,6 +114,8 @@ void loop()
     wake_backup_setActive(waker.mode()==RINGING && (waker._since_alarm_started > (config.backup_start * 1000)));
     us_audio += measure_us();
 #endif
+
+    ArduinoOTA.handle();
 
 #if ENABLE_DEBUG_PRINT_TASK_TIMINGS
 

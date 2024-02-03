@@ -1,98 +1,79 @@
-#ifndef WAKE_LIGHT_H
-#define WAKE_LIGHT_H
+#pragma once
+#include "wake_method.h"
 
-#include <Arduino.h>
-#include "config.h"
-
-#include <elapsedMillis.h>
-
-#if ENABLE_ESPNOW
 #include "util/espnow.h"
 
-int counter_printLight = 10000;
-
-message_generic msg_light;
-int led_retry_count = 0;
-float control_light = 0.0;
-elapsedMillis since_last_light = 0;
-
-void sendLight(int index, float value) // 0.0 - 1.0
+class WakeLight : public WakeMethod
 {
-    msg_light.index = index;
-    msg_light.value = constrain(value, 0, 1);
-    esp_now_send(MAC_ADDRESS_LIGHT, (uint8_t *)&msg_light, sizeof(msg_light));
-    // Serial.println("sendLight(" + String(msg_light.value) + ")");
-}
-
-// should be called slowly (from server command)
-void controlLight(float value, bool andMotor = false)
-{
-    control_light = constrain(value, 0.0, 1.0);
+public:
+    void control(float value) override
+    {
+        // todo should this check here only be in set() ?
+        if (fabs(_current - value) > 0.002 
+        || (value == 0.0 && _current != 0))
+        {
+            _current = constrain(value, 0.0, 1.0);
 
 #if USER_IS_LEO
-        sendLight(0, mapConstrainf(value, 0.0, 0.8, 0, 1));
-        sendLight(1, mapConstrainf(value, 0.2, 1.0, 0, 1));
-        for (int l = 2; l < 4; l++)
-        {
-            sendLight(l, value);
-            delayMicroseconds(1000);
-        }
+            send_cmd(0, mapConstrainf(_current, 0.0, 0.8, 0, 1));
+            send_cmd(1, mapConstrainf(_current, 0.2, 1.0, 0, 1));
+            for (int l = 2; l < 4; l++)
+            {
+                send_cmd(l, _current);
+                delayMicroseconds(1000);
+            }
 #elif USER_IS_JANEK
-        for (int l = 0; l < 4; l++)
-        {
-            sendLight(l, value);
-            delayMicroseconds(1000);
-        }
+            for (int l = 0; l < 4; l++)
+            {
+                send_cmd(l, _current);
+                delayMicroseconds(1000);
+            }
 #elif USER_IS_DAVE
-        // map value to W, R, G channels
-        delayMicroseconds(1000);
-        sendLight(0, (value - 0.2) / 0.8);      // white
-        delayMicroseconds(1000);
-        sendLight(1, value * 5);                    // red
-        delayMicroseconds(1000);
-        sendLight(2, constrain(value * 2, 0, 0.7)); // green
+            // map _current to W, R, G channels)
+            send_cmd(0, (_current - 0.2) / 0.8);          // white
+            send_cmd(1, _current * 5);                    // red
+            send_cmd(2, constrain(_current * 2, 0, 0.7)); // green
 
-    if (andMotor)
-    {
-#define offset 0.5
-        if (value > offset)
-        {
-            float motor_position = constrain((value - offset) / (1 - offset), 0.0, 1.0);
-            Serial.printf("sendLight(21, %f)\n", motor_position);
-            delayMicroseconds(1000);
-            sendLight(21, motor_position);
+            if (_since_is_part_of_ritual < 200)
+            {
+                constexpr float offset = 0.5;
+                if (_current >= offset)
+                    send_cmd(21, mapConstrainf(_current, offset, 1.0, 0.0, 1.0));
+            }
+#endif
         }
     }
-#endif
-        since_last_light = 0;
-}
 
-// can be called constantly from loop
-void setLight(float value, bool andMotor = false) // 0.0 - 1.0
-{
-    if (since_last_light < 60)
-        return;
-
-    //Serial.println("setLight(" + String(msg_light.value) + ")");
-    value = constrain(value, 0.0, 1.0);
-
-    if (control_light == value)
-        led_retry_count++;
-    else
-        led_retry_count = 0;
-
-    if (led_retry_count < 3)
+    void set(float value) override
     {
-        controlLight(value, andMotor);
+        if (_since_last_msg < 60)
+            return;
 
-        if (counter_printLight++ > 50)
+        value = constrain(value, 0.0, 1.0);
+
+        static int num_msg = 0;
+        if (_current != value)
+            num_msg = 0;
+
+        if (num_msg < 3)
         {
-            counter_printLight = 0;
-            Serial.println("setLight(" + String(msg_light.value) + ")");
+            num_msg++;
+            control(value); // send 3x control per 1x set
         }
     }
-}
 
-#endif
+    // little hack to also trigger motor
+    void setRitualStep() { _since_is_part_of_ritual = 0; }
 
-#endif // WAKE_LIGHT_H
+private:
+    elapsedMillis _since_last_msg = 0;
+    elapsedMillis _since_is_part_of_ritual = 0;
+
+    void send_cmd(int index, float value) // 0.0 - 1.0
+    {
+        // Serial.println("send_cmd(" + String(msg.value) + ")");
+        ESPNOW_send_cmd(MAC_ADDRESS_LIGHT, index, value); // TODO dynamic address
+        _since_last_msg = 0;
+        delayMicroseconds(1000); // TODO is this really necessary ?!?
+    }
+};

@@ -1,68 +1,72 @@
-#ifndef WAKE_COFFEE_H
-#define WAKE_COFFEE_H
+#pragma once
+#include "wake_method.h"
 
-#include <Arduino.h>
-#include "config.h"
-
-#include <elapsedMillis.h>
-
-#if ENABLE_ESPNOW
 #include "util/espnow.h"
 
-bool control_coffee = false;
-elapsedMillis since_coffee_on = 60 * MIN_TO_MS;
-
-message_generic msg_coffee;
-int coffee_retry_count = 0;
-
-void controlCoffee(bool value)
+class WakeCoffee : public WakeMethod
 {
-    since_coffee_on = 60 * MIN_TO_MS;
-
-    control_coffee = value;
-    Serial.println("setCoffee(" + String(control_coffee) + ")");
-
-    msg_coffee.value = !control_coffee;
-    msg_coffee.index = 0;
-    esp_now_send(MAC_ADDRESS_COFFEE, (uint8_t *)&msg_coffee, sizeof(msg_coffee));
-
-}
-
-void setCoffee(bool value)
-{
-    if (control_coffee == value)
-        coffee_retry_count++;
-    else
-        coffee_retry_count = 0;
-
-    if (coffee_retry_count < 3)
+public:
+    void control(float value) override
     {
-        controlCoffee(value);
+        Serial.printf("WakeLight::control( %f ) \n", value);
+        // TODO Check for big enough change ?!
+        _current = constrain(value, 0.0, 1.0);
 
-        if (control_coffee)
-            since_coffee_on = 0;
+        set_OK_to_use();
+
+        send_cmd(0, !_current);
     }
-}
 
-void coffee_reset()
-{
-    controlCoffee(true);
-    controlCoffee(false);
-    since_coffee_on = 60 * MIN_TO_MS;
-}
-
-void coffee_loop()
-{
-    if (control_coffee)
+    void set(float value) override
     {
-        // if (since_coffee_on > (5000))
-        // AUTO TURN OFF after 8 minutes
-        if (since_coffee_on > (8 * MIN_TO_MS))
+        if (_since_last_msg < 60)
+            return;
+
+        value = constrain(value, 0.0, 1.0);
+
+        static int num_msg = 0;
+        if (_current != value)
+            num_msg = 0;
+
+        if (num_msg < 3)
         {
-            setCoffee(false);
+            num_msg++;
+            control(value); // send 3x control per 1x set
+
+            if (value > 0.0)
+                _since_last_active = 0;
         }
     }
-}
-#endif
 
-#endif // WAKE_COFFEE_H
+    void loop()
+    {
+        if (_current > 0)
+        {
+            // AUTO TURN OFF after 8 minutes
+            if (_since_last_active > (8 * MIN_TO_MS))
+                set(0);
+        }
+    }
+
+    void reset()
+    {
+        control(true);
+        control(false);
+        set_OK_to_use();
+    }
+
+#define COOLDOWN_TIME_MS 60 * MIN_TO_MS
+    bool is_OK_to_use() { return _since_last_active > COOLDOWN_TIME_MS; }
+    void set_OK_to_use() { _since_last_active = COOLDOWN_TIME_MS; }
+private:
+    elapsedMillis _since_last_msg = 0;
+    elapsedMillis _since_last_active = 5 * 60 * MIN_TO_MS;
+
+    void send_cmd(int index, float value) // 0.0 - 1.0
+    {
+        // Serial.println("send_cmd(" + String(msg.value) + ")");
+        ESPNOW_send_cmd(MAC_ADDRESS_COFFEE, index, value); // TODO dynamic address
+        _since_last_msg = 0;
+        delayMicroseconds(1000); // TODO is this really necessary ?!?
+    }
+};

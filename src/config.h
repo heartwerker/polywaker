@@ -1,6 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include "util.h"
+
 // ================== FEATURES ====================
 #define ENABLE_WIFI             1
 #define ENABLE_SERVER           1
@@ -66,30 +68,6 @@ uint8_t MAC_ADDRESS_COFFEE[6] = {0x08, 0x3A, 0x8D, 0xD1, 0xA7, 0x2A}; // polywak
 #define PIN_I2S_DOUT    17
 
 #define PIN_I2S_MCLK    0 // not used
-
-// =========================================================================
-
-#define MIN_TO_MS 60000
-
-//TODO use extra repo for these helpers:
-
-float mapf(float value, float fromLow, float fromHigh, float toLow, float toHigh) {
-    return (value - fromLow) * (toHigh - toLow) / (fromHigh - fromLow) + toLow;
-}
-
-float mapConstrainf(float value, float fromLow, float fromHigh, float toLow, float toHigh) {
-    return constrain(mapf(value, fromLow, fromHigh, toLow, toHigh), toLow, toHigh);
-}
-
-template <typename T>
-T wrap(T value, T low, T high) {
-    T range = high - low;
-    while (value < low)
-        value += range;
-    while (value > high)
-        value -= range;
-    return value;
-}
 
 
 #endif // CONFIG_H

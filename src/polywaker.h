@@ -12,7 +12,7 @@
 #include "wake_music.h"
 #endif
 
-#if ENABLE_WAKE_COFFEE 
+#if ENABLE_WAKE_COFFEE
 #include "wake_coffee.h"
 #endif
 
@@ -32,22 +32,28 @@
 class PolyWaker : public ModeWaker
 {
 public:
+    WakeMusic music;
+    WakeLight light;
+#if ENABLE_WAKE_COFFEE
+    WakeCoffee coffee;
+#endif
+
+public:
     void setup()
     {
         ModeWaker::setup();
 
-#if ENABLE_WAKE_BACKUP
-        wake_backup_setup();
-#endif
-
 #if ENABLE_WAKE_LIGHT
-        setLight(0.0);
-#endif
-#if ENABLE_WAKE_COFFEE
-        coffee_reset();
+        light.control(0);
 #endif
 #if ENABLE_WAKE_MUSIC
-        setMusic(0);
+        music.control(0);
+#endif
+#if ENABLE_WAKE_COFFEE
+        coffee.reset();
+#endif
+#if ENABLE_WAKE_BACKUP
+        wake_backup_setup();
 #endif
     }
 
@@ -56,7 +62,7 @@ public:
         ui.setDisplaySleeping(false); // always wakeup when mode changes
 
         ModeWaker::setMode(newMode);
-        
+
         if (newMode == RINGING)
         {
             if (mode() == IDLE)
@@ -67,10 +73,10 @@ public:
                 Serial.println("unusual?! Alarm started from mode " + String(modeName()));
 
 #if ENABLE_WAKE_LIGHT
-            controlLight(0);
+            light.control(0);
 #endif
 #if ENABLE_WAKE_MUSIC
-            controlMusic(0);
+            music.control(0);
 #endif
 #if ENABLE_COFFEE
             controlCoffee(0);
@@ -88,8 +94,8 @@ public:
 #if ENABLE_COFFEE
             setCoffee(0);
 #endif
-            setLight(0);
-            setMusic(0);
+            light.control(0);
+            music.control(0);
             break;
         }
         case RINGING:
@@ -127,8 +133,10 @@ public:
         }
         }
 
+#if 1 // auto set on double click
         if (since_click_arcade < 1000)
             setAlarmRelativeIn(2);
+#endif
         since_click_arcade = 0;
     }
 
@@ -154,7 +162,7 @@ public:
         switch (mode())
         {
         case IDLE:
-            controlLight(control_light + 0.05 * float(steps));
+            light.control(light.get() + 0.05 * float(steps));
             break;
         case RINGING:
             _since_alarm_started += steps * 10 * 1000;
@@ -176,7 +184,7 @@ public:
         ModeWaker::loop();
 
 #if ENABLE_WAKE_COFFEE
-        coffee_loop(); // to automatically turn off coffee machine
+        coffee.loop(); // for auto turn off
 #endif
 
         switch (mode())
@@ -189,16 +197,13 @@ public:
         // ================================================
         case SNOOZING:
         {
-#if ENABLE_WAKE_LIGHT
-            float bri = 1.0 - float(since_mode_changed()) / float(2000);
-            bri = control_light * constrain(bri, 0.0, 1.0);
-            setLight(bri);
-#endif
+            float gain = 1.0 - float(since_mode_changed()) / float(2000);
 
+#if ENABLE_WAKE_LIGHT
+            light.set(light.get() * constrain(gain, 0.0, 1.0));
+#endif
 #if ENABLE_WAKE_MUSIC
-            float vol = 1.0 - float(since_mode_changed()) / float(2000);
-            vol = control_music * constrain(vol, 0.0, 1.0);
-            setMusic(vol);
+            music.set(music.get() * constrain(gain, 0.0, 1.0));
 #endif
             break;
         }
@@ -210,53 +215,49 @@ public:
         float wake_start = 0;
 
 #if ENABLE_WAKE_COFFEE
-            if (time > (config.coffee_start * MIN_TO_MS))
-            {
-                // only turn on if has not been used in the last hour
-                if (since_coffee_on > (60 * MIN_TO_MS))
-                    setCoffee(true);
-            }
+        if (time > (config.coffee_start * MIN_TO_MS))
+            if (coffee.is_OK_to_use())
+            coffee.set(1);
 #endif
 
 #if ENABLE_WAKE_LIGHT
-            wake_start = config.light_start * MIN_TO_MS;
-            if (time > wake_start)
-            {
-                float percentage = float(time - wake_start) / float(config.light_end * MIN_TO_MS);
+        wake_start = config.light_start * MIN_TO_MS;
+        if (time > wake_start)
+        {
+            float percentage = float(time - wake_start) / float(config.light_end * MIN_TO_MS);
 
 #if ENABLE_WAKE_BACKUP
-                if (config.alarm_hour)
-                    if (time > (config.backup_start * MIN_TO_MS))
-                        percentage = float(millis() % 1000) / 1000.0;
+            if (config.alarm_hour)
+                if (time > (config.backup_start * MIN_TO_MS))
+                    percentage = float(millis() % 1000) / 1000.0;
 #endif
-
-                setLight(percentage, true);
-            }
+            light.setRitualStep();
+            light.set(percentage);
+        }
 #endif
 #if ENABLE_WAKE_MUSIC
-            wake_start = config.music_start * MIN_TO_MS;
-            if (time > wake_start)
-            {
-                float percentage = float(time - wake_start) / float(config.music_end * MIN_TO_MS);
-                setMusic(percentage);
-            }
+        wake_start = config.music_start * MIN_TO_MS;
+        if (time > wake_start)
+        {
+            float percentage = float(time - wake_start) / float(config.music_end * MIN_TO_MS);
+            music.set(percentage);
+        }
 #endif
 
 #if ENABLE_WAKE_BACKUP
-            static float volume = 0.0; // ?!
-            wake_start = config.backup_start * MIN_TO_MS;
-            if (time > wake_start)
-            {
-                volume = float(time - wake_start) / float(config.backup_fade_relative_s * 1000.0);
-                wake_backup_setVolume(volume);
+        static float volume = 0.0; // ?!
+        wake_start = config.backup_start * MIN_TO_MS;
+        if (time > wake_start)
+        {
+            volume = float(time - wake_start) / float(config.backup_fade_relative_s * 1000.0);
+            wake_backup_setVolume(volume);
 
-                long time_backup = time - wake_start;
-                float frequency = 0.5;
-                frequency += (float(time_backup) / (config.backup_fade_relative_s * 1000)) * 1;
-                wake_backup_setFrequency(constrain(frequency, 0.1, 2.0));
-            }
+            long time_backup = time - wake_start;
+            float frequency = 0.5;
+            frequency += (float(time_backup) / (config.backup_fade_relative_s * 1000)) * 1;
+            wake_backup_setFrequency(constrain(frequency, 0.1, 2.0));
+        }
 #endif
-
     }
 };
 

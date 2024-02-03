@@ -135,5 +135,13 @@ void ESPNOW_sendBytes(uint8_t *data, uint8_t len)
         esp_now_send(address_target, data, len);
 }
 
+void ESPNOW_send_cmd(uint8_t *target, int index, float value)
+{
+    message_generic msg;
+    msg.index = index;
+    msg.value = constrain(value, 0, 1);
+    esp_now_send(target, (uint8_t *)&msg, sizeof(msg));
+}
+
 
 #endif // ESPNOW_H

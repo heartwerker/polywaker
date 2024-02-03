@@ -164,9 +164,9 @@ void display_loop()
         // show linear "fader" for light value
         if (ui.since_activity < 2000)
         {
-            if (control_light > 0.01)
+            if (waker.light.get() > 0.01)
                 for (int y = 0; y < 2; y++)
-                    display.drawLine(0, y, 128 * control_light, y, 1);
+                    display.drawLine(0, y, 128 * waker.light.get(), y, 1);
                     
         }
 

@@ -103,10 +103,10 @@ bool parse(StaticJsonDocument<200> *pDoc, Config::Parameter *parameter)
 
 void send_wake_control()
 {
-  sendJson("control_light", String(control_light * 100));
-  sendJson("control_music", String(control_music * 100));
+  sendJson("control_light", String(waker.light.get() * 100));
+  sendJson("control_music", String(waker.music.get() * 100));
 #if ENABLE_WAKE_COFFEE
-  sendJson("control_coffee", String(control_coffee));
+  sendJson("control_coffee", String(waker.coffee.get()));
 #endif
 }
 
@@ -114,8 +114,8 @@ void send_wake_control()
 void webSocketEvent(byte num, WStype_t ws_type, uint8_t *payload, size_t length)
 {
   switch (ws_type)
-  {                        
-  case WStype_DISCONNECTED: 
+  {
+  case WStype_DISCONNECTED:
   {
     Serial.println("Client Nr. " + String(num) + " disconnected");
     break;
@@ -136,7 +136,7 @@ void webSocketEvent(byte num, WStype_t ws_type, uint8_t *payload, size_t length)
     break;
   }
   case WStype_TEXT:
-  { 
+  {
     StaticJsonDocument<200> doc;
     DeserializationError error = deserializeJson(doc, payload);
     if (error)
@@ -170,26 +170,29 @@ void webSocketEvent(byte num, WStype_t ws_type, uint8_t *payload, size_t length)
       alarm_set |= parse(&doc, &config.alarm_enabled);
       alarm_set |= parse(&doc, &config.alarm_hour);
       alarm_set |= parse(&doc, &config.alarm_minute);
-      
+
       // TODO remove waker dependency
       if (alarm_set)
         waker.setAlarmFromConfig();
 
+      // if (type.endsWith(".control"))
       if (type.startsWith("control_"))
       {
         Serial.printf("Received %s ( %d ) \n", type.c_str(), value);
 
+        float percent = float(value) / 100.0;
+
         if (type == "control_light")
-          controlLight(float(value) / 100.0);
+          waker.light.control(percent);
 
         if (type == "control_music")
-          controlMusic(float(value) / 100.0);
+          waker.music.control(percent);
 
-      #if ENABLE_WAKE_COFFEE
+#if ENABLE_WAKE_COFFEE
         if (type == "control_coffee")
-          controlCoffee(bool(value));
-      #endif
-          send_wake_control();
+          waker.coffee.control(bool(value));
+#endif
+        send_wake_control();
       }
     }
 
@@ -199,12 +202,10 @@ void webSocketEvent(byte num, WStype_t ws_type, uint8_t *payload, size_t length)
 }
 void server_setup()
 {
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SPIFFS, "/index.html", "text/html");
-  });
-  server.onNotFound([](AsyncWebServerRequest *request) {
-    request->send(404, "text/plain", "File not found");
-  });
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(SPIFFS, "/index.html", "text/html"); });
+  server.onNotFound([](AsyncWebServerRequest *request)
+                    { request->send(404, "text/plain", "File not found"); });
   server.serveStatic("/", SPIFFS, "/");
 
   webSocket.begin();                 // start websocket
